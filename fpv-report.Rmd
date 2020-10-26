@@ -1,0 +1,147 @@
+---
+title: "Future Predicted Value"
+author: "Your Name"
+date: "2020-01-01" # fix the date!
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo=F)
+```
+
+## Future Predicted Value
+
+Future predicted value is the estimate of how much someone will spend in the future with a 
+company. In this report we calculate FPV for the Wedge in 2015 using data from before that 
+year. Our report has the following sections: 
+
+1. Variable selection: In this section we describe the variables that we use in the model.
+1. Model formulation: This section describes the model itself. 
+1. Estimates of model accuracy: We run a quick analysis of model accuracy in the final section.
+
+```{r includes}
+# Feel free to adjust to the ones you need.
+library(tidyverse)
+library(scales)
+library(reshape2)
+library(DBI)
+library(broom)
+
+```
+
+
+```{r db-hookup}
+# Change to your path
+path.to.db <- paste0("C:/Users/jchan/Dropbox/",
+                      "Teaching/AppliedDataAnalytics/",
+                      "repos/wedge-solution/")
+
+# Creating the connection to the DB. Similar to 
+# a cursor. 
+con <- dbConnect(RSQLite::SQLite(),
+                 dbname=paste0(path.to.db,"wedge_reporting.db"))
+
+# Listing the tables
+#dbListTables(con) # uncomment to see table names
+
+# And creating connections to the two tables. 
+owner.ym <- tbl(con, "owner_year_month")
+
+```
+
+### Variable Selection
+
+```{r variable-selection}
+# Use this space to create the data set you'll feed into `lm` I've made a simple one for you.
+# I've done this in two different ways so you can see a couple of techniques.
+
+# First way uses "pivot_wider"
+md <- owner.ym %>% 
+  filter(card_no != "3",
+         between(year,2013,2015)) %>% 
+  group_by(card_no,year) %>%
+  summarize(sales=sum(sales,na.rm=T)) %>% 
+  ungroup() %>% 
+  collect 
+
+md <- md %>% 
+  pivot_wider(id_cols=c("card_no"),
+              names_from=year,
+              names_prefix="sales_",
+              values_from=sales)
+
+# Second builds a data set up from the ground
+md2 <- owner.ym %>% 
+  filter(card_no != "3",
+         between(year,2013,2015)) %>% 
+  distinct(card_no) %>% 
+  collect 
+
+# Now start bringing in our covariates. 
+md2 <- left_join(md2,
+                owner.ym %>% 
+                  filter(year==2013) %>% 
+                  group_by(card_no) %>% 
+                  summarize(sales_2013 = sum(sales)) %>% 
+                  collect,
+                by="card_no") 
+
+md2 <- left_join(md2,
+                owner.ym %>% 
+                  filter(year==2014) %>% 
+                  group_by(card_no) %>% 
+                  summarize(sales_2014 = sum(sales)) %>% 
+                  collect,
+                by="card_no") 
+
+md2 <- left_join(md2,
+                owner.ym %>% 
+                  filter(year==2015) %>% 
+                  group_by(card_no) %>% 
+                  summarize(sales_2015 = sum(sales)) %>% 
+                  collect,
+                by="card_no") 
+
+
+```
+
+<!-- 
+
+After you build your data set, explain what the variables you created are.
+ 
+--> 
+
+### Model Formulation
+
+```{r modeling}
+# A simple example model
+
+lm.1 <- lm(sales_2015 ~ sales_2013 + sales_2014,
+           data=md,
+           subset=sales_2014 <= 10000)
+
+# Of course, you'd never just dump a summary table into a document!
+print(tidy(lm.1))
+```
+
+<!--
+
+Do a short write up of your model. What terms are significant? What's the R^2? What's the 
+residual standard error and how would you interpret it?
+-->
+
+### Model Accuracy
+
+```{r model-accuracy}
+
+# your code here
+
+```
+
+<!--
+
+As the readme indicates, do a quick check of model accuracy on a holdout sample that
+isn't use for fitting.
+
+-->
+

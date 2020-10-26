@@ -30,5 +30,8 @@ mean(abs(y_hat-y)/y)
 ```
 I'd recommend plotting your errors (aka, residuals) on the test set to see where your errors tend to be.
 
+Pay attention to the RMD and make sure your knitted document is an actual document, like you'd turn into
+a class where you had an assignment to do a written report. This doesn't have to be long, but 
+I'd like you to make it look semi-professional.
 
 
